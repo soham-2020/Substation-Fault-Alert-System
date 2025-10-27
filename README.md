@@ -105,10 +105,84 @@ This project implements a complete end-to-end real-time fault prediction system 
 - This ensures high visibility for critical faults like overtemperature or short circuit.
 
 ---
+1. Clone the Repository
+git clone https://github.com/<your-username>/Substation-Fault-Alert-System.git
+cd Substation-Fault-Alert-System
 
-## How to Run
+2. Install Dependencies
 
-1. Clone the repository.
-2. Install dependencies:
-   ```bash
-   pip install pandas scikit-learn requests joblib
+Make sure Python 3.10+ is installed.
+Then install the required Python libraries:
+
+pip install pandas numpy scikit-learn joblib requests
+
+3. Generate Simulated Data
+
+Run the script to generate synthetic transformer sensor data:
+
+python simulate_ev_data.py
+
+
+This creates a CSV file (e.g., transformer_data.csv) containing voltage, current, and temperature readings with corresponding fault labels.
+
+4. Balance Fault Data
+
+Balance the dataset to prevent bias during training:
+
+python balance_fault_data.py
+
+5. Train the Model
+
+Train the Random Forest classifier and export the model:
+
+python train_fault_model.py
+
+
+This saves a trained model as model.pkl.
+
+6. Configure Telegram Alerts
+
+Create a Telegram bot using @BotFather and get your bot token.
+
+Get your chat ID using the Telegram API (you can test with TEST_FOR_TELEGRAM.py).
+
+Update the bot token and chat ID inside live_prediction.py:
+
+BOT_TOKEN = "your_bot_token_here"
+CHAT_ID = "your_chat_id_here"
+
+7. Run Live Predictions
+
+Start the real-time fault detection engine:
+
+python live_prediction.py
+
+
+This will:
+
+Simulate new sensor readings continuously
+
+Predict faults using the trained model
+
+Log results in live_predictions.csv
+
+Send Telegram alerts for critical faults (Overtemperature / Short Circuit)
+
+8. View in Excel Dashboard
+
+Open PIVOT_TABLE.xlsm in Microsoft Excel.
+
+Enable Macros and Data Connections.
+
+Click Refresh All (or wait 2 minutes for auto-refresh).
+
+View live-updating fault statistics and pivot charts.
+
+End Result
+
+Real-time transformer health monitoring.
+
+Instant Telegram alerts for critical faults.
+
+Dynamic Excel dashboard showing live fault classification and trends.
+
