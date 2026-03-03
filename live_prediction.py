@@ -6,8 +6,8 @@ import requests
 
 # --- Telegram Alert Function ---
 def send_telegram_alert(message):
-    bot_token = "7950715421:AAE_jUOUwTpXCYXatlHAI_k-LBa1g_Xt_Po"
-    chat_id = "1887823793"
+    bot_token = "enter your bot_token"
+    chat_id = "enter youre chat_id"
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message}
     try:
@@ -61,4 +61,5 @@ while True:
 
     # Wait before next reading
     time.sleep(15)
+
 
