@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+model.pkl
+transformer_data.csv
+ev_charging_data.csv
+ev_charging_clean.csv
+ev_charging_balanced.csv

@@ -1,16 +1,10 @@
-import requests
+"""Send a manually requested Telegram connectivity test using local environment config."""
+from live_prediction import load_local_env, send_telegram_alert
 
-def send_telegram_alert(message):
-    bot_token = "Enter your bot id"
-    chat_id = "enter your chatid"
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {"chat_id": chat_id, "text": message}
-    try:
-        response = requests.get(url, params=payload)
-        print("Response:", response.json())
-    except Exception as e:
-        print("Error:", e)
 
-# Test Message
-send_telegram_alert("Test message from EV monitoring system.")
-
+if __name__ == "__main__":
+    load_local_env()
+    if send_telegram_alert("Test message from the Substation Fault Alert System (simulation project)."):
+        print("Telegram test message sent.")
+    else:
+        print("No test message sent; configure TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID first.")

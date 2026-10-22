@@ -1,0 +1,18 @@
+name: pipeline-tests
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m unittest tests_pipeline -v
+      - run: python simulate_transformer_data.py --rows 500 --output /tmp/transformer_data.csv
+      - run: python train_fault_model.py --data /tmp/transformer_data.csv --model /tmp/model.pkl
+      - run: python live_prediction.py --model /tmp/model.pkl --output /tmp/predictions.csv --once
