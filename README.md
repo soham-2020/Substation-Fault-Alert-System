@@ -60,6 +60,28 @@ When credentials are absent, Telegram delivery is skipped and predictions are st
 
 `PIVOT_TABLE.xlsm` is a demonstration dashboard. Open it in desktop Excel and refresh its data connection to `live_predictions.csv`. Excel/VBA refresh behavior depends on the local workbook configuration. The CSV now includes `Pred_Fault_Status` and `Operation_Mode` alongside `Pred_Label`; use the text label for a readable chart.
 
+## Reproduce the synthetic holdout result
+
+The reported score is from generated data only; this project has no connection to transformer sensors or operational equipment. To reproduce the same run from a clean checkout, use Python 3.12 and the tested package versions, then run:
+
+```bash
+python -m pip install numpy==2.3.5 pandas==2.2.3 scikit-learn==1.8.0 joblib==1.5.3
+python simulate_transformer_data.py --rows 960 --seed 42 --output transformer_data.csv
+python train_fault_model.py --data transformer_data.csv --model model.pkl
+```
+
+The generator samples five labels with probabilities: Normal 78%, Overcurrent 8%, Overtemperature 7%, Overcurrent + Overtemperature 4%, and Short Circuit 3%. Voltage, current, and temperature are drawn from class-specific normal distributions (mean and standard deviation):
+
+| State | Voltage (V) | Current (A) | Temperature (°C) |
+|---|---:|---:|---:|
+| Normal | 415 ± 7 | 78 ± 12 | 40 ± 6 |
+| Overcurrent | 415 ± 7 | 122 ± 8 | 45 ± 6 |
+| Overtemperature | 415 ± 7 | 78 ± 12 | 72 ± 5 |
+| Overcurrent + Overtemperature | 415 ± 7 | 125 ± 8 | 74 ± 5 |
+| Short Circuit | 350 ± 10 | 145 ± 12 | 48 ± 7 |
+
+With 960 rows and seed 42, the generated data contains 746 Normal, 88 Overcurrent, 64 Overtemperature, 35 combined-fault, and 27 Short Circuit records. The trainer uses a stratified 80/20 split, upsamples only the training partition, and fits a 200-tree Random Forest. In the tested environment (Python 3.12.14, NumPy 2.3.5, pandas 2.2.3, scikit-learn 1.8.0, joblib 1.5.3), the 192-row holdout produced **191/192 correct (99.48%)**. The single error was an Overcurrent record predicted as Normal. Rare classes have few holdout examples, and this synthetic result does not establish accuracy on real transformers.
+
 ## Reproducible validation
 
 ```bash
