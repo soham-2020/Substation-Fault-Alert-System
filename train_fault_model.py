@@ -54,6 +54,9 @@ def train_model(data: pd.DataFrame, model_path: str | Path = "model.pkl", seed: 
     )
     classifier.fit(X_train, y_train)
     predictions = classifier.predict(X_test)
+    correct = int((predictions == y_test.to_numpy()).sum())
+    total = int(len(y_test))
+    print(f"Exact holdout accuracy: {correct}/{total} ({correct / total:.2%})")
     target_names = [name for name, _ in sorted(FAULT_LABELS.items(), key=lambda pair: pair[1])]
     print("Evaluation on the untouched, stratified holdout set:")
     print(classification_report(y_test, predictions, labels=list(FAULT_LABELS.values()),
