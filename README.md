@@ -1,188 +1,82 @@
-# Substation-Fault-Alert-System
+# Substation Fault Alert System
 
-A real-time transformer fault detection system using machine learning and Python, integrated with a live Excel dashboard and Telegram alerts.
+A Python demonstration of transformer fault classification using a Random Forest, generated sensor data, optional Telegram notifications, and an Excel dashboard.
 
----
+> **Simulation scope:** the supplied data and live readings are generated in software. This repository does not connect to transformer sensors, a PLC, SCADA, or protection equipment. Predictions and alerts are for demonstration only and must not be used for operational or safety decisions.
 
-## Overview
+## Pipeline
 
-This project implements a complete end-to-end real-time fault prediction system for electrical substations. It simulates realistic sensor data, uses machine learning to classify faults, and provides alerts through Telegram. It also integrates with Microsoft Excel to visualize fault data in real time.
+1. `simulate_transformer_data.py` creates a reproducible, intentionally imbalanced synthetic dataset (`transformer_data.csv`).
+2. `train_fault_model.py` splits original rows into a stratified training set and untouched test set, then upsamples only the training set. Evaluation therefore uses original, non-duplicated holdout rows.
+3. The trainer saves `model.pkl`, a bundle containing the fitted Random Forest, feature order, and label map.
+4. `live_prediction.py` loads that bundle and calls the model for each simulated reading. It logs both the numeric code and text label in `live_predictions.csv`. It never uses hand-written rules to choose predictions.
+5. Telegram messages are optional and require credentials supplied through environment variables or a local `.env` file. The Excel dashboard can read the prediction CSV.
 
----
+## Fault label map
 
-## Features
+These IDs are fixed in the simulator, training bundle, live output, and documentation. They are not assigned alphabetically by an encoder.
 
-- ✅ **Synthetic data generation** of voltage, current, temperature
-- ✅ **Custom fault logic** for Overcurrent, Overtemperature, Short Circuit, and combinations
-- ✅ **Data balancing** using upsampling to handle imbalanced classes
-- ✅ **ML model training** using Random Forest to classify fault types
-- ✅ **Real-time prediction engine** simulating continuous transformer readings
-- ✅ **Telegram alert bot** for critical faults
-- ✅ **Live-updating Excel dashboard** with Pivot Charts and auto-refresh every 2 minutes
-
----
-
-## Project Pipeline
-
-### 1. Data Simulation (`simulate_ev_data.py`)
-- Simulates readings for 10 transformer stations at 15-minute intervals for 24 hours.
-- Applies logical conditions to classify data as:
-  - Normal
-  - Overcurrent
-  - Overtemperature
-  - Overcurrent + Overtemperature
-  - Short Circuit
-
-### 2. Fault Balancing (`balance_fault_data.py`)
-- Balances the dataset by upsampling minority fault classes to prevent model bias.
-
-### 3. Model Training (`train_fault_model.py`)
-- Trains a Random Forest classifier using voltage, current, and temperature as features.
-- Encodes fault labels and saves the trained model as `model.pkl`.
-
-### 4. Live Prediction and Logging (`live_prediction.py`)
-- Simulates real-time readings.
-- Loads the trained model and makes predictions.
-- Appends results to `live_predictions.csv`.
-- Sends **Telegram alerts** for Overtemperature or Short Circuit events.
-
-### 5. Alert System (`TEST_FOR_TELEGRAM.py`)
-- Standalone script to verify Telegram bot integration using a test message.
-- Uses Bot API and chat ID linked to the developer’s phone.
-
----
-
-## Excel Dashboard (`PIVOT_TABLE.xlsm`)
-
-- Connected to `live_predictions.csv` using Power Query.
-- Auto-refreshes every 2 minutes using VBA macros.
-- Displays:
-  - Count of each fault type
-  - Pivot chart updated in real-time
-  - Clean and readable transformer health stats
-
----
-
-## File Summary
-
-| File | Purpose |
-|------|---------|
-| `simulate_ev_data.py` | Simulates and labels transformer sensor data |
-| `balance_fault_data.py` | Upsamples minority fault classes |
-| `train_fault_model.py` | Trains and exports the Random Forest model |
-| `live_prediction.py` | Real-time simulation + prediction + logging + alerting |
-| `TEST_FOR_TELEGRAM.py` | Verifies Telegram alert delivery |
-| `live_predictions.csv` | Stores prediction output for Excel dashboard |
-| `PIVOT_TABLE.xlsm` | Excel dashboard with auto-refresh and pivot charts |
-
----
-
-## Fault Label Map
-
-| Code | Label |
-|------|-------|
+| Code | Fault label |
+|---:|---|
 | 0 | Normal |
 | 1 | Overcurrent |
 | 2 | Overtemperature |
 | 3 | Overcurrent + Overtemperature |
 | 4 | Short Circuit |
 
----
+## Setup and run
 
-## Tech Stack
+Requires Python 3.10 or newer.
 
-- **Python 3.10+**
-- pandas, numpy, scikit-learn, joblib, requests
-- Microsoft Excel with VBA macros
-- Telegram Bot API
+```bash
+python -m venv .venv
+# Windows: .venv\\Scripts\\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
 
----
+python simulate_transformer_data.py --rows 960 --seed 42
+python train_fault_model.py --data transformer_data.csv --model model.pkl
+python live_prediction.py --model model.pkl --output live_predictions.csv --once
+```
 
-## Telegram Bot Integration
+Remove `--once` to continue generating a reading every 15 seconds. Change the cadence with `--interval 30`. Every live reading is simulated; this script does not acquire real sensor measurements.
 
-- A functional Telegram bot is integrated and tested.
-- It sends **real-time fault alerts directly to the developer’s phone**.
-- This ensures high visibility for critical faults like overtemperature or short circuit.
+To create data with a different seed or size:
 
----
-1. Clone the Repository
-git clone https://github.com/<your-username>/Substation-Fault-Alert-System.git
-cd Substation-Fault-Alert-System
+```bash
+python simulate_transformer_data.py --rows 2000 --seed 123 --output transformer_data.csv
+```
 
-2. Install Dependencies
+## Telegram configuration
 
-Make sure Python 3.10+ is installed.
-Then install the required Python libraries:
+1. Create a bot with Telegram's `@BotFather` and obtain a bot token and chat ID.
+2. Copy `.env.example` to `.env`, then set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` in `.env`.
+3. Keep `.env` private. It is excluded by `.gitignore`; never paste credentials into source code or commit them.
+4. Run `python TEST_FOR_TELEGRAM.py` to send an explicitly labeled test message. Live prediction sends alerts only for model predictions of Overtemperature, combined Overcurrent + Overtemperature, or Short Circuit. Messages say they are simulated predictions.
 
-pip install pandas numpy scikit-learn joblib requests
+When credentials are absent, Telegram delivery is skipped and predictions are still logged. Telegram requests use HTTPS, a timeout, and HTTP error checking.
 
-3. Generate Simulated Data
+## Excel dashboard
 
-Run the script to generate synthetic transformer sensor data:
+`PIVOT_TABLE.xlsm` is a demonstration dashboard. Open it in desktop Excel and refresh its data connection to `live_predictions.csv`. Excel/VBA refresh behavior depends on the local workbook configuration. The CSV now includes `Pred_Fault_Status` and `Operation_Mode` alongside `Pred_Label`; use the text label for a readable chart.
 
-python simulate_ev_data.py
+## Reproducible validation
 
+```bash
+python -m unittest tests_pipeline -v
+```
 
-This creates a CSV file (e.g., transformer_data.csv) containing voltage, current, and temperature readings with corresponding fault labels.
+The tests use deterministic simulated data and temporary model files. GitHub Actions runs the tests and a one-reading simulated end-to-end smoke test on pushes and pull requests. The trained model is intentionally not committed: regenerate it from the documented command so the data split, training, evaluation, and bundle are reproducible.
 
-4. Balance Fault Data
+## Files
 
-Balance the dataset to prevent bias during training:
-
-python balance_fault_data.py
-
-5. Train the Model
-
-Train the Random Forest classifier and export the model:
-
-python train_fault_model.py
-
-
-This saves a trained model as model.pkl.
-
-6. Configure Telegram Alerts
-
-Create a Telegram bot using @BotFather and get your bot token.
-
-Get your chat ID using the Telegram API (you can test with TEST_FOR_TELEGRAM.py).
-
-Update the bot token and chat ID inside live_prediction.py:
-
-BOT_TOKEN = "your_bot_token_here"
-CHAT_ID = "your_chat_id_here"
-
-7. Run Live Predictions
-
-Start the real-time fault detection engine:
-
-python live_prediction.py
-
-
-This will:
-
-Simulate new sensor readings continuously
-
-Predict faults using the trained model
-
-Log results in live_predictions.csv
-
-Send Telegram alerts for critical faults (Overtemperature / Short Circuit)
-
-8. View in Excel Dashboard
-
-Open PIVOT_TABLE.xlsm in Microsoft Excel.
-
-Enable Macros and Data Connections.
-
-Click Refresh All (or wait 2 minutes for auto-refresh).
-
-View live-updating fault statistics and pivot charts.
-
-End Result
-
-Real-time transformer health monitoring.
-
-Instant Telegram alerts for critical faults.
-
-Dynamic Excel dashboard showing live fault classification and trends.
-
+| File | Purpose |
+|---|---|
+| `simulate_transformer_data.py` | Deterministic synthetic readings with stable labels |
+| `train_fault_model.py` | Train-only upsampling, holdout evaluation, and model bundle export |
+| `live_prediction.py` | Model-backed simulated inference, CSV logging, optional alerts |
+| `TEST_FOR_TELEGRAM.py` | Optional credential-based test message |
+| `.env.example` | Credential variable names without secrets |
+| `tests_pipeline.py` | Simulation, leakage-sequence, and model-mapping tests |
+| `.github/workflows/tests.yml` | CI test and simulated smoke test |
+| `PIVOT_TABLE.xlsm` | Excel dashboard artifact |
